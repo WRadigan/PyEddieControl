@@ -19,7 +19,7 @@ import sys
 from time import sleep
 
 # This is the IP address for my Eddie, yours will probably be different
-MyEddie = EddiePlus("Edward","192.168.1.109")
+MyEddie = EddiePlus("Edward","192.168.1.133")
 
 print "Use a,d,w & x to drive Eddie"
 print "Press q to Quit"
@@ -54,7 +54,8 @@ while KeyPress is not "q":
         else:
             # Do nothing
             # Received a character other than an Eddie command
-            pass
+            print "Key Received: {0}".format(KeyPress)
+            #pass
     else:
         # Increment Eddie's speed towards zero
         if TurnVal > 0:
@@ -74,14 +75,14 @@ while KeyPress is not "q":
     if TurnVal > MaxTurn:
         TurnVal = MaxTurn
         
-    print "Turn  = {0}".format(TurnVal)
-    print "Speed = {0}".format(SpeedVal)
+    #print "Turn  = {0}".format(TurnVal)
+    #print "Speed = {0}".format(SpeedVal)
 
     MyEddie.Turn(TurnVal)
     MyEddie.Drive(SpeedVal)
     
     # Go through the loop at about 10Hz
-    sleep(.1)
+    sleep(.05)
 
 MyEddie.Disconnect()
         

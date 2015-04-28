@@ -42,6 +42,8 @@ EddieBalance listens for data on two ports:
 import socket
 #import ctypes
 import sys
+import numpy as np
+import re
 
 
 class EddiePlus:
@@ -58,6 +60,10 @@ class EddiePlus:
         self.EddieResponseAddr = (self.host_any, 4243)
         self.sock = socket.socket(socket.AF_INET,socket.SOCK_DGRAM) # UDP
         self.sock.settimeout(2.0)
+        
+        
+        self.GetStreamingData = False
+        #self.UDPTimer = RepeatedTimer(1, self.GetPIDS())
 
         # Initialize this particular Eddy to make sure he's alive and well.
         if self.InitializeEddie():
@@ -75,6 +81,7 @@ class EddiePlus:
         # If an Eddie responds, then there is a robot on the other side, and 
         # commands can be sent.
         
+        print "Looking for Eddie on: {0}".format(self.EddieControlAddr)
         # Set up the receive port
         try:
             try:
@@ -123,25 +130,25 @@ class EddiePlus:
     def Drive(self,Speed):
         # Send the command to drive, along with the speed integer.
         Speed = int(Speed)
-        if Speed > 10:
+        if abs(Speed) > 15:
             print "Whoa there sparky!  Slow down"
             return 0
         
         cmd = "DRIVE{0}".format(int(Speed))
-        print self.Name + ": " + cmd
+        #print self.Name + ": " + cmd
         ByteCount = self.sock.sendto(cmd, self.EddieCommandAddr)
         return ByteCount
 
                         
     def Turn(self,TurnSpeed):
         # Send the command to drive, along with the speed integer.
-        Speed = int(TurnSpeed)
-        if Speed > 10:
+        TurnSpeed = int(TurnSpeed)
+        if abs(TurnSpeed) > 15:
             print "Seriously, do I look like a Corvette to you?"
             return 0
             
-        cmd = "TURN{0}".format(int(Speed))
-        print self.Name + ": " + cmd
+        cmd = "TURN{0}".format(int(TurnSpeed))
+        #print self.Name + ": " + cmd
         ByteCount = self.sock.sendto(cmd, self.EddieCommandAddr)
         return ByteCount
 
@@ -150,6 +157,7 @@ class EddiePlus:
         # Make sure that Eddie is stopped before we go.
         self.Drive(0)
         self.Turn(0)
+        self.StreamControl(False) # Shut down streaming data
 
         # We're done for now.
         self.sock.close()
@@ -168,6 +176,71 @@ class EddiePlus:
             print "Oops. Timed out.  Maybe nobody's home?"
 
 
+    def StreamControl(self,StreamOnOff):
+        # GETPIDS = Returns all PIDs for speed and pitch controllers via UDP
+        
+        if StreamOnOff and self.GetStreamingData:
+            print "Already streaming data"
+            return
+        
+        if StreamOnOff:
+            ByteCount = self.sock.sendto("STREAM1", self.EddieCommandAddr)
+            self.GetStreamingData = True
+            #self.UDPTimer.start()
+            print "DATA STREAM: On"
+        else:
+            ByteCount = self.sock.sendto("STREAM0", self.EddieCommandAddr)
+            self.GetStreamingData = False
+            #self.UDPTimer.stop()
+            print "DATA STREAM: Off"
+        
+        # Should cause Eddie to start sending a string like:
+        # "  "PIDout: %0.2f,%0.2f\tcompPitch: %6.2f kalPitch: %6.2f\tPe: %0.3f\tIe: %0.3f\tDe: %0.3f\tPe: %0.3f\tIe: %0.3f\tDe: %0.3f\r\n"  "
+        
+            
+    def GetStreamData(self,DataPoints):
+        
+        '''
+        speedPIDoutput = np.zeros(DataPoints) 
+	pitchPIDoutput = np.zeros(DataPoints)
+        filteredPitch = np.zeros(DataPoints)
+        kalmanAngle = np.zeros(DataPoints)
+        pitchPIDError = np.zeros(DataPoints) 
+        pitchPIDAccumulatedError = np.zeros(DataPoints)
+        pitchPIDDifferentialError = np.zeros(DataPoints) 
+        speedPIDError = np.zeros(DataPoints)
+        speedPIDAccumulatedError = np.zeros(DataPoints)
+	speedPIDDifferentialError = np.zeros(DataPoints)
+	'''
+	
+	DataValues = np.zeros((DataPoints,10))
+	ThisRow = 0
+	
+	for ii in range(DataPoints):
+            try:
+                data, addr = self.sock.recvfrom(1024) # buffer size is 1024 bytes
+                #print data
+                values = re.findall("[-+]?\d+[\.]?\d*", data) # Pull the data out of the formatted string
+                #print "length is {0}".format(len(values))
+                if len(values) != 10:
+                    print "Incomplete message"
+                else:
+                    DataValues[ThisRow] = values
+                #print values
+                ThisRow += 1
+                #for term in data.split('\t'):
+                #    values = term.split(':')
+                #    #print "{0} = {1}".format(values[0],float(values[1]))
+                #print "received message:", data.split("\t")
+            except socket.timeout:
+                print "Oops. Timed out.  Maybe nobody's home?"
+
+        sys.stdout.flush()
+        
+        return DataValues
+
+
+    
     def SendCommand(self):
         # Seems like there ought to be a use for a 'generic' command, but I'm
         # not sure what it is.
@@ -175,9 +248,71 @@ class EddiePlus:
                    
     def __exit__(self, type, value, traceback):
         # Close the UDP Port
+        self.StreamControl(False) # Shut down streaming data
         self.sock.close()
 
 
+
+
+
+from threading import Timer
+
+class RepeatedTimer(object):
+    def __init__(self, interval, function, *args, **kwargs):
+        self._timer     = None
+        self.interval   = interval
+        self.function   = function
+        self.args       = args
+        self.kwargs     = kwargs
+        self.is_running = False
+        #self.start() # Don't start the timer by default.
+
+    def _run(self):
+        self.is_running = False
+        self.start()
+        self.function(*self.args, **self.kwargs)
+
+    def start(self):
+        if not self.is_running:
+            self._timer = Timer(self.interval, self._run)
+            self._timer.start()
+            self.is_running = True
+
+    def stop(self):
+        self._timer.cancel()
+        self.is_running = False
+        
+        
+        
+# Usage:
+#
+#
+#
+if __name__ == "Not Really":
+    from time import sleep
+    
+    def hello(name):
+        print "Hello %s!" % name
+    
+    print "starting..."
+    rt = RepeatedTimer(1, hello, "World") # it auto-starts, no need of rt.start()
+    try:
+        sleep(5) # your long-running job goes here...
+    finally:
+        rt.stop() # better in a try/finally block to make sure the program ends!
+#
+#
+#
+#
+#
+
+
+
+
+        
+        
+        
+        
 if __name__ == "__main__":
     
     import time # for the 'sleep' delay timer
