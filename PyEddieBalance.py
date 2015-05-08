@@ -5,7 +5,7 @@ import EddieIMU
 import EddieMotor
 from subprocess import call
 from math import degrees
-from time import sleep
+from time import sleep, time
 
 # Pin Name = Libmraa number. 
 #RIGHT motor
@@ -29,20 +29,35 @@ imu = EddieIMU.EddieIMU(IMUIni)
 
 poll_interval = imu.imu.IMUGetPollInterval()
 
+print "Proportional speed control begins..... NOW!"
+print "10 seconds duration"
+
+sleep(0.1)
+
+tStart = time()
 
 # This is the 'read loop'
-while True:
-    rAngle = imu.GetPitch()
-    if rAngle:
-        dAngle = degrees(rAngle)
-        print "Pitch = {0}".format(dAngle)
+while ((time() - tStart) < 10):
+    #rAngle = imu.GetPitch()
+    pose = imu.GetPose()
+    #if rAngle:
+    if pose:
+        dAngle = degrees(pose[1])
+        #print "R:{0:5.2f} P:{1:5.2f} Y:{2:5.2f}".format(degrees(pose[0]), degrees(pose[1]), degrees(pose[2]))
         
-        mSpeed = (dAngle+90) / 100
-        print "mSpeed = {0}".format(mSpeed)
+        mSpeed = (dAngle+90) / 50
+        if pose[2] > 0:
+            mSpeed = -mSpeed
+        #print "mSpeed = {0}".format(mSpeed)
         RightMotor.SetSpeed(mSpeed)
-        LeftMotor.SetSpeed(mSpeed)
+        LeftMotor.SetSpeed(-mSpeed)
     sleep(poll_interval*1.0/1000.0)
 
+print "Time's up, test is over"
 
 RightMotor.SetSpeed(0)
 LeftMotor.SetSpeed(0)
+
+
+
+

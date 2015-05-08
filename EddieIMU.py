@@ -28,7 +28,14 @@ class EddieIMU:
         poll_interval = self.imu.IMUGetPollInterval()
         print("Recommended Poll Interval: %dmS\n" % poll_interval)
                 
-        
+    def GetPose(self):
+        # Returns Eddie's current pitch (forward & backward) angle
+        if self.imu.IMURead():
+            data = self.imu.getIMUData()
+            fusionPose = data["fusionPose"]
+            return fusionPose
+            # Pitch = ~ -90deg [-1.571rad] is 'standing up' for Eddie
+                
     def GetPitch(self):
         # Returns Eddie's current pitch (forward & backward) angle
         if self.imu.IMURead():
