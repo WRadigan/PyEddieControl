@@ -6,6 +6,10 @@ import EddieMotor
 from subprocess import call
 from math import degrees
 from time import sleep, time
+import sys
+
+
+import csv
 
 # Pin Name = Libmraa number. 
 #RIGHT motor
@@ -31,13 +35,24 @@ poll_interval = imu.imu.IMUGetPollInterval()
 
 print "Proportional speed control begins..... NOW!"
 print "10 seconds duration"
+sys.stdout.flush()
 
 sleep(0.1)
 
 tStart = time()
+nPoints = 2000  # Number of data points to collect
+#1000 data points is about 6 seconds
+
+SAVE_CSV_DATA = True
+
+if SAVE_CSV_DATA:
+    CSVDataFile = open("EddieData.csv", 'wb')
+    wr = csv.writer(CSVDataFile)
+    wr.writerow(('Roll','Pitch','Yaw','mSpeed','Time'))
 
 # This is the 'read loop'
-while ((time() - tStart) < 10):
+#while ((time() - tStart) < 10):
+for step in range(nPoints):
     #rAngle = imu.GetPitch()
     pose = imu.GetPose()
     #if rAngle:
@@ -51,9 +66,16 @@ while ((time() - tStart) < 10):
         #print "mSpeed = {0}".format(mSpeed)
         RightMotor.SetSpeed(mSpeed)
         LeftMotor.SetSpeed(-mSpeed)
+
+        if SAVE_CSV_DATA: # This should be done in a faster way than comparing the flag _every time_!
+            #lData = pose + (mSpeed,)
+            wr.writerow(pose + (mSpeed,time()))
+    
     sleep(poll_interval*1.0/1000.0)
 
 print "Time's up, test is over"
+
+CSVDataFile.close()
 
 RightMotor.SetSpeed(0)
 LeftMotor.SetSpeed(0)
