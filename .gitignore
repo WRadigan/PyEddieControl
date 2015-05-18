@@ -1,5 +1,7 @@
 # PyEddieControl Files
 *.ini
+*.csv
+EddieSnippet.py
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

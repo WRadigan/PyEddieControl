@@ -1,12 +1,14 @@
 '''
 This is a script to 'drive' Eddie via keyboard input
 
-*** NOTE ***
+Usage:
+> python EddieDrive.py
 
+*** NOTE ***
 This script does not work within the Enthought Canopy environment.
 It must be run from the command line via: python EddieDrive.py
 
-It is also currently only operable on Windows, sorry.
+It is also currently only works on Windows too, sorry.
 '''
 
 # WARNING # - Getch is a Windows only function.  Similar functionality
@@ -14,12 +16,15 @@ It is also currently only operable on Windows, sorry.
 from msvcrt import getch, kbhit
 
 
-from PyEddiePlus import EddiePlus
 import sys
 from time import sleep
 
 # This is the IP address for my Eddie, yours will probably be different
-MyEddie = EddiePlus("Edward","192.168.1.133")
+# OLD USAGE --> MyEddie = PyEddiePlus.EddiePlus("Edward","192.168.1.111")
+import PyEddiePlus
+MyEddie = PyEddiePlus.EddiePlus("Edward")
+MyEddie.FindEddie()
+MyEddie.InitializeEddie()
 
 print "Use a,d,w & x to drive Eddie"
 print "Press q to Quit"
